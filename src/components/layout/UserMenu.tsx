@@ -1,4 +1,5 @@
 import { userMenuItems } from "./layoutData";
+import { useAuth } from "../../contexts/useAuth";
 
 interface UserMenuProps {
   darkMode: boolean;
@@ -7,6 +8,7 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ darkMode, isOpen, onClose }: UserMenuProps) {
+  const { logout } = useAuth();
   if (!isOpen) return null;
 
   return (
@@ -23,7 +25,10 @@ export function UserMenu({ darkMode, isOpen, onClose }: UserMenuProps) {
                   : "text-secondary-700 hover:bg-secondary-100"
             }`}
             role="menuitem"
-            onClick={onClose}
+            onClick={() => {
+              if (item.action === "logout") void logout();
+              onClose();
+            }}
           >
             <item.icon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
             <span>{item.name}</span>

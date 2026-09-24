@@ -3,6 +3,13 @@ export type Status = 'Pending' | 'InProgress' | 'Completed'
 export type DashboardStatus = 'Pending' | 'Completed' | 'In_Progress'
 export type DashboardPriority = 'Low' | 'Medium' | 'High'
 
+export interface AuthUser {
+  id: number | string
+  name: string
+  email: string
+  interests?: string[]
+}
+
 export interface Task {
   id: number | string
   title: string

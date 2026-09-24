@@ -1,5 +1,4 @@
 import { Bell, ChevronDown, Menu, Search, User } from "lucide-react";
-import { NotificationMenu } from "./NotificationMenu";
 import { UserMenu } from "./UserMenu";
 import { navItems } from "./layoutData";
 
@@ -111,7 +110,7 @@ export function Header({
                 aria-hidden="true"
               />
             </button>
-            <NotificationMenu darkMode={darkMode} isOpen={notificationOpen} />
+          
           </div>
 
           {/* User menu */}
