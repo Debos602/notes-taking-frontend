@@ -1,5 +1,6 @@
 import { userMenuItems } from "./layoutData";
 import { useAuth } from "../../contexts/useAuth";
+import { useNavigate } from "react-router-dom";
 
 interface UserMenuProps {
   darkMode: boolean;
@@ -9,6 +10,7 @@ interface UserMenuProps {
 
 export function UserMenu({ darkMode, isOpen, onClose }: UserMenuProps) {
   const { logout } = useAuth();
+  const navigate = useNavigate();
   if (!isOpen) return null;
 
   return (
@@ -27,10 +29,11 @@ export function UserMenu({ darkMode, isOpen, onClose }: UserMenuProps) {
             role="menuitem"
             onClick={() => {
               if (item.action === "logout") void logout();
+              if (item.action === "profile") navigate("/profile");
               onClose();
             }}
           >
-            <item.icon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+            <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span>{item.name}</span>
           </button>
         ))}

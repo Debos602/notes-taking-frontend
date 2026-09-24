@@ -1,27 +1,42 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import type { AuthUser } from '../types'
 import { AuthContext } from './useAuth'
 import type { AuthContextType } from './useAuth'
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace(/\/+$/, '')
+export const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace(/\/+$/, '')
 const AUTH_SESSION_KEY = 'auth-session-active'
 
 type AuthResponse = {
   message?: string
   error?: string
   success?: boolean
-  data?: { token?: string; accessToken?: string; user?: AuthUser }
+  data?: {
+    token?: string
+    accessToken?: string
+    access_token?: string
+    user?: AuthUser
+    tokens?: { token?: string; accessToken?: string; access_token?: string }
+  }
   token?: string
   accessToken?: string
+  access_token?: string
 }
+
+type AuthResult = { token?: string; user: AuthUser }
 
 function getResponseToken(response: Response, result: AuthResponse | null) {
   const authorization = response.headers.get('Authorization')
   const headerToken = authorization?.replace(/^Bearer\s+/i, '').trim()
   return result?.data?.token
     ?? result?.data?.accessToken
+    ?? result?.data?.access_token
+    ?? result?.data?.tokens?.token
+    ?? result?.data?.tokens?.accessToken
+    ?? result?.data?.tokens?.access_token
     ?? result?.token
     ?? result?.accessToken
+    ?? result?.access_token
     ?? headerToken
     ?? response.headers.get('x-access-token')
     ?? response.headers.get('access-token')
@@ -64,10 +79,53 @@ async function getCurrentUser(token?: string): Promise<AuthUser> {
   return user as AuthUser
 }
 
+async function loginRequest({ email, password }: { email: string; password: string }): Promise<AuthResult> {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ email, password }),
+  })
+  const result = await response.json().catch(() => null) as AuthResponse | null
+  if (!response.ok) throw new Error(result?.message || result?.error || 'Login failed. Please check your credentials.')
+  const token = getResponseToken(response, result)
+  return {
+    token,
+    user: result?.data?.user ?? { id: email, name: email.split('@')[0], email },
+  }
+}
+
+async function registerRequest({ name, email, password, interests }: { name: string; email: string; password: string; interests?: string[] }): Promise<AuthResult> {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ name, email, password, interests }),
+  })
+  const result = await response.json().catch(() => null) as AuthResponse | null
+  if (!response.ok || !result?.success) throw new Error(result?.message || result?.error || 'Registration failed. Please try again.')
+  return {
+    token: getResponseToken(response, result),
+    user: result.data?.user ?? { id: email, name, email, interests },
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  const loginMutation = useMutation({ mutationFn: loginRequest })
+  const registerMutation = useMutation({ mutationFn: registerRequest })
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (!response.ok) throw new Error('Logout request failed.')
+    },
+  })
 
   const refresh = useCallback(async () => {
     try {
@@ -100,73 +158,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh])
 
   const login = useCallback(async (email: string, password: string) => {
-    let response: Response
-    try {
-      response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      })
-    } catch {
-      throw new Error('Unable to reach the login server. Is the backend running?')
-    }
-
-    const result = await response.json().catch(() => null) as AuthResponse | null
-
-    if (!response.ok) {
-      throw new Error(result?.message || result?.error || 'Login failed. Please check your credentials.')
-    }
-
-    const loginToken = getResponseToken(response, result)
-    const currentUser = result?.data?.user ?? await getCurrentUser(loginToken)
+    const { token: loginToken, user: currentUser } = await loginMutation.mutateAsync({ email, password })
     sessionStorage.setItem(AUTH_SESSION_KEY, 'true')
     setToken(loginToken ?? 'cookie-session')
     setUser(currentUser)
-  }, [])
+  }, [loginMutation])
 
   const register = useCallback(
     async (name: string, email: string, password: string, interests?: string[]) => {
-      let response: Response
-      try {
-        response = await fetch(`${API_BASE_URL}/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ name, email, password, interests }),
-        })
-      } catch {
-        throw new Error('Unable to reach the registration server. Is the backend running?')
-      }
-
-      const result = await response.json().catch(() => null) as AuthResponse | null
-
-      if (!response.ok || !result?.success) {
-        throw new Error(result?.message || result?.error || 'Registration failed. Please try again.')
-      }
-
-      const registerToken = getResponseToken(response, result)
-      const currentUser = result?.data?.user ?? await getCurrentUser(registerToken)
+      const { token: registerToken, user: currentUser } = await registerMutation.mutateAsync({ name, email, password, interests })
       sessionStorage.setItem(AUTH_SESSION_KEY, 'true')
       setToken(registerToken ?? 'cookie-session')
       setUser(currentUser)
     },
-    [],
+    [registerMutation],
   )
 
   const logout = useCallback(async () => {
     try {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      })
+      await logoutMutation.mutateAsync()
     } finally {
       setToken(null)
       setUser(null)
       sessionStorage.removeItem(AUTH_SESSION_KEY)
     }
-  }, [])
+  }, [logoutMutation])
+
+  const updateProfile = useCallback(async (input: { name?: string; email?: string; interests?: string[] }) => {
+    if (!user) throw new Error('You must be logged in to update your profile.')
+
+    const response = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(String(user.id))}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && token !== 'cookie-session' ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(input),
+    })
+    const result = await response.json().catch(() => null) as {
+      message?: string
+      error?: string
+      data?: { user?: AuthUser } | AuthUser
+      user?: AuthUser
+    } | null
+    const updatedUser = result?.user
+      ?? (result?.data && 'user' in result.data ? result.data.user : result?.data)
+
+    if (!response.ok || !updatedUser) {
+      throw new Error(result?.message || result?.error || 'Unable to update your profile.')
+    }
+
+    setUser(updatedUser as AuthUser)
+  }, [token, user])
+
+  const deleteAccount = useCallback(async () => {
+    if (!user) return
+
+    const response = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(String(user.id))}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: token && token !== 'cookie-session' ? { Authorization: `Bearer ${token}` } : undefined,
+    })
+    const result = await response.json().catch(() => null) as { message?: string; error?: string } | null
+
+    if (!response.ok) {
+      throw new Error(result?.message || result?.error || 'Unable to delete your account.')
+    }
+
+    await logout()
+  }, [logout, token, user])
 
   const value: AuthContextType = {
     user,
@@ -175,6 +236,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authReady,
     login,
     register,
+    updateProfile,
+    deleteAccount,
     logout,
   }
 

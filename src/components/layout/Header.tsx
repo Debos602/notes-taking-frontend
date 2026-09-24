@@ -1,6 +1,7 @@
 import { Bell, ChevronDown, Menu, Search, User } from "lucide-react";
 import { UserMenu } from "./UserMenu";
 import { navItems } from "./layoutData";
+import { useAuth } from "../../contexts/useAuth";
 
 interface HeaderProps {
   darkMode: boolean;
@@ -32,6 +33,7 @@ export function Header({
   onUserMenuToggle,
   onCloseMenus,
 }: HeaderProps) {
+  const { user } = useAuth();
   const paper = darkMode ? "bg-[#1B1023]" : "bg-[#FAF8FB]";
   const ink = darkMode ? "text-[#EEE6F4]" : "text-[#2A1A3D]";
   const inkSoft = darkMode ? "text-[#93839F]" : "text-[#6B5C7A]";
@@ -143,8 +145,8 @@ export function Header({
                 />
               </div>
               <div className="hidden min-w-0 text-left md:block">
-                <p className={`truncate text-sm font-medium leading-tight ${ink}`}>John Doe</p>
-                <p className={`truncate font-mono text-[10px] leading-tight ${inkSoft}`}>admin</p>
+                <p className={`truncate text-sm font-medium leading-tight ${ink}`}>{user?.name || "User"}</p>
+                <p className={`truncate font-mono text-[10px] leading-tight ${inkSoft}`}>{user?.email || ""}</p>
               </div>
               <ChevronDown
                 className={`hidden h-4 w-4 transition-transform md:block ${inkSoft} ${

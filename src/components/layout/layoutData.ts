@@ -1,11 +1,10 @@
 import {
   LayoutDashboard,
-  ListTodo,
-  Users,
   Settings,
   User,
   HelpCircle,
   LogOut,
+  StickyNote,
   type LucideIcon,
 } from "lucide-react";
 
@@ -17,8 +16,7 @@ export type NavItem = {
 
 export const navItems: NavItem[] = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/" },
-  { name: "Tasks", icon: ListTodo, href: "/tasks" },
-  { name: "Team", icon: Users, href: "/team" },
+  { name: "Notes", icon: StickyNote, href: "/notes" },
   { name: "Settings", icon: Settings, href: "/settings" },
 ];
 

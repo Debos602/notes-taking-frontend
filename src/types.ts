@@ -7,8 +7,31 @@ export interface AuthUser {
   id: number | string
   name: string
   email: string
+  role?: string
   interests?: string[]
 }
+
+export interface Note {
+  id: string
+  title: string
+  content: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NotesResponse {
+  success: boolean
+  message: string
+  meta: { page: number; limit: number; total: number; totalPage: number }
+  data: Note[]
+}
+
+export interface CreateNoteInput {
+  title: string
+  content: string
+}
+
+export type UpdateNoteInput = Partial<CreateNoteInput>
 
 export interface Task {
   id: number | string

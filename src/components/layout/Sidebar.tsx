@@ -1,4 +1,5 @@
 import { ChevronDown, User } from "lucide-react";
+import { useAuth } from "../../contexts/useAuth";
 import type { NavItem } from "./layoutData";
 import { navItems } from "./layoutData";
 
@@ -60,6 +61,7 @@ export function Sidebar({
   isActive,
   onCollapse,
 }: SidebarProps) {
+  const { user } = useAuth();
   const paper = darkMode ? "bg-[#1B1023]" : "bg-[#FAF8FB]";
   const ink = darkMode ? "text-[#EEE6F4]" : "text-[#2A1A3D]";
   const inkSoft = darkMode ? "text-[#93839F]" : "text-[#6B5C7A]";
@@ -134,10 +136,10 @@ export function Sidebar({
             </div>
             <div className="min-w-0 flex-1">
               <p className={`truncate text-sm font-semibold leading-tight tracking-[-0.01em] ${ink}`}>
-                John Doe
+                {user?.name || "User"}
               </p>
               <p className={`truncate font-mono text-[10.5px] leading-tight tracking-wide ${inkSoft}`}>
-                john@taskflow.io
+                {user?.email || ""}
               </p>
             </div>
           </div>

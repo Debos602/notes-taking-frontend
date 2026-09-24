@@ -6,10 +6,11 @@ import MainLayout from './layout/MainLayout'
 
 
 import { SettingPage } from './pages/SettingPage'
-import { TeamPage } from './pages/TeamPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { NotePage } from './pages/NotePage'
+import { DashboardOverview } from './components/DashboardOverview'
 
 
 function ProtectedRoute({ element }: { element: ReactNode }) {
@@ -31,7 +32,7 @@ function App() {
             <ProtectedRoute
               element={
                 <MainLayout>
-                  <NotePage />
+                  <DashboardOverview />
                 </MainLayout>
               }
             />
@@ -50,36 +51,24 @@ function App() {
           }
         />
         <Route
-          path="/tasks"
-          element={
-            <ProtectedRoute
-              element={
-                <MainLayout>
-                  
-                </MainLayout>
-              }
-            />
-          }
-        />
-        <Route
-          path="/team"
-          element={
-            <ProtectedRoute
-              element={
-                <MainLayout>
-                  <TeamPage />
-                </MainLayout>
-              }
-            />
-          }
-        />
-        <Route
           path="/settings"
           element={
             <ProtectedRoute
               element={
                 <MainLayout>
                   <SettingPage />
+                </MainLayout>
+              }
+            />
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute
+              element={
+                <MainLayout>
+                  <ProfilePage />
                 </MainLayout>
               }
             />

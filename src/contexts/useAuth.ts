@@ -13,6 +13,8 @@ export interface AuthContextType {
     password: string,
     interests?: string[],
   ) => Promise<void>
+  updateProfile: (input: { name?: string; email?: string; interests?: string[] }) => Promise<void>
+  deleteAccount: () => Promise<void>
   logout: () => Promise<void>
 }
 
