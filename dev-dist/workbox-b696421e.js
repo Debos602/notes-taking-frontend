@@ -1795,7 +1795,14 @@ define(['exports'], (function (exports) { 'use strict';
         return cachedResponse;
       }
       /**
-  
+       * Puts a request/response pair in the cache (and invokes any applicable
+       * plugin callback methods) using the `cacheName` and `plugins` defined on
+       * the strategy object.
+       *
+       * The following plugin lifecycle methods are invoked when using this method:
+       * - cacheKeyWillBeUsed()
+       * - cacheWillUpdate()
+       * - cacheDidUpdate()
        *
        * @param {Request|string} key The request or URL to use as the cache key.
        * @param {Response} response The response to cache.
@@ -1804,8 +1811,8 @@ define(['exports'], (function (exports) { 'use strict';
        */
       async cachePut(key, response) {
         const request = toRequest(key);
-        
-        
+        // Run in the next task to avoid blocking other cache reads.
+        // https://github.com/w3c/ServiceWorker/issues/1397
         await timeout(0);
         const effectiveRequest = await this.getCacheKey(request, 'write');
         {
@@ -1815,7 +1822,7 @@ define(['exports'], (function (exports) { 'use strict';
               method: effectiveRequest.method
             });
           }
-          
+          // See https://github.com/GoogleChrome/workbox/issues/2818
           const vary = response.headers.get('Vary');
           if (vary) {
             logger.debug(`The response for ${getFriendlyURL(effectiveRequest.url)} ` + `has a 'Vary: ${vary}' header. ` + `Consider setting the {ignoreVary: true} option on your strategy ` + `to ensure cache matching and deletion works as expected.`);

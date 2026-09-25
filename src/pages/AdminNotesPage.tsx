@@ -78,11 +78,11 @@ export function AdminNotesPage() {
               <p className="mt-4 flex-1 whitespace-pre-wrap text-sm leading-6 text-[#6B5C7A] dark:text-[#93839F]">{note.content}</p>
               <div className="mt-5 flex items-center gap-3 border-t border-[#E0D7E7] pt-3 dark:border-[#332140]">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#CFE2FF] text-[10px] font-semibold text-[#24558F] dark:bg-[#2A3F5C] dark:text-[#8FB8EE]">
-                  {note.owner.name.slice(0, 2).toUpperCase()}
+                  {note.owner?.name?.slice(0, 2)?.toUpperCase() ?? '??'}
                 </span>
                 <div className="min-w-0 text-xs">
-                  <p className="truncate font-medium text-[#2A1A3D] dark:text-[#EEE6F4]">{note.owner.name}</p>
-                  <p className="truncate text-[#6B5C7A] dark:text-[#93839F]">{note.owner.email}</p>
+                  <p className="truncate font-medium text-[#2A1A3D] dark:text-[#EEE6F4]">{note.owner?.name ?? 'Unknown user'}</p>
+                  <p className="truncate text-[#6B5C7A] dark:text-[#93839F]">{note.owner?.email ?? 'No email'}</p>
                 </div>
               </div>
             </article>
