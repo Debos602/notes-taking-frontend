@@ -40,8 +40,22 @@ export function ProfilePage() {
     },
   })
 
+  function resetProfileForm() {
+    setName(user?.name || '')
+    setEmail(user?.email || '')
+    setInterests(user?.interests?.join(', ') || '')
+  }
+
+  function toggleEditProfile() {
+    updateMutation.reset()
+    setError('')
+    resetProfileForm()
+    setIsEditing((value) => !value)
+  }
+
   const handleDelete = () => {
     setError('')
+    deleteMutation.reset()
     setIsDeleteModalOpen(true)
   }
 
@@ -62,7 +76,7 @@ export function ProfilePage() {
           {canManageProfile && <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setIsEditing((value) => !value)}
+              onClick={toggleEditProfile}
               className="inline-flex items-center gap-2 rounded-sm border-2 border-[#E0D7E7] px-3 py-2 text-sm font-medium text-[#2A1A3D] hover:bg-[#F1E9F5] dark:border-[#332140] dark:text-[#EEE6F4] dark:hover:bg-[#2A1938]"
             >
               {isEditing ? <X className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
@@ -84,7 +98,13 @@ export function ProfilePage() {
       {error && <p className="rounded-sm border-2 border-[#B23A5C] bg-[#FBEFF2] p-3 text-sm text-[#8A2645]">{error}</p>}
 
       {isEditing && canManageProfile && (
-        <Modal title="Edit profile" onClose={() => !updateMutation.isPending && setIsEditing(false)}>
+          <Modal title="Edit profile" onClose={() => {
+            if (!updateMutation.isPending) {
+              resetProfileForm()
+              updateMutation.reset()
+              setIsEditing(false)
+            }
+          }}>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-medium text-[#2A1A3D] dark:text-[#EEE6F4]">
               Full name
@@ -116,12 +136,18 @@ export function ProfilePage() {
       )}
 
       {isDeleteModalOpen && canManageProfile && (
-        <Modal title="Delete account" onClose={() => !deleteMutation.isPending && setIsDeleteModalOpen(false)}>
+        <Modal title="Delete account" onClose={() => {
+          if (!deleteMutation.isPending) {
+            deleteMutation.reset()
+            setError('')
+            setIsDeleteModalOpen(false)
+          }
+        }}>
           <p className="text-sm leading-6 text-[#6B5C7A] dark:text-[#93839F]">
             This permanently removes your account and cannot be undone.
           </p>
           <div className="mt-6 flex justify-end gap-2">
-            <button type="button" onClick={() => setIsDeleteModalOpen(false)} disabled={deleteMutation.isPending} className="rounded-sm border-2 border-[#E0D7E7] px-4 py-2 text-sm font-medium text-[#2A1A3D] dark:border-[#332140] dark:text-[#EEE6F4]">
+            <button type="button" onClick={() => { deleteMutation.reset(); setError(''); setIsDeleteModalOpen(false) }} disabled={deleteMutation.isPending} className="rounded-sm border-2 border-[#E0D7E7] px-4 py-2 text-sm font-medium text-[#2A1A3D] dark:border-[#332140] dark:text-[#EEE6F4]">
               Cancel
             </button>
             <button type="button" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} className="inline-flex items-center gap-2 rounded-sm border-2 border-[#B23A5C] bg-[#B23A5C] px-4 py-2 text-sm font-medium text-white disabled:opacity-60">

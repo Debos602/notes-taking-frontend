@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Edit3, FileText, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Modal } from '../components/ui/Modal'
 import { NoteListSkeleton } from '../components/NoteListSkeleton'
 import { useAuth } from '../contexts/useAuth'
@@ -19,6 +19,11 @@ export function NotePage() {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
   const [isEditingNote, setIsEditingNote] = useState(false)
 
+  function resetNoteForm() {
+    setTitle('')
+    setContent('')
+  }
+
   const notesQuery = useQuery({
     queryKey: ['notes', page, token],
     queryFn: () => getNotes(page, PAGE_SIZE, token),
@@ -33,8 +38,7 @@ export function NotePage() {
     mutationFn: () => createNote({ title: title.trim(), content: content.trim() }, token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notes'] })
-      setTitle('')
-      setContent('')
+      resetNoteForm()
       setIsCreateModalOpen(false)
       setPage(1)
     },
@@ -44,6 +48,7 @@ export function NotePage() {
     onSuccess: (updatedNote) => {
       queryClient.setQueryData(['note', selectedNoteId, token], updatedNote)
       queryClient.invalidateQueries({ queryKey: ['notes'] })
+      resetNoteForm()
       setIsEditingNote(false)
     },
   })
@@ -53,16 +58,10 @@ export function NotePage() {
       queryClient.removeQueries({ queryKey: ['note', deleteTargetId, token] })
       queryClient.invalidateQueries({ queryKey: ['notes'] })
       setDeleteTargetId(null)
+      deleteMutation.reset()
       if (selectedNoteId === deleteTargetId) setSelectedNoteId(null)
     },
   })
-
-  useEffect(() => {
-    if (noteQuery.data) {
-      setTitle(noteQuery.data.title)
-      setContent(noteQuery.data.content)
-    }
-  }, [noteQuery.data])
 
   const notes = notesQuery.data?.data ?? []
   const totalPages = notesQuery.data?.meta.totalPage ?? 1
@@ -85,7 +84,14 @@ export function NotePage() {
           </div>
           <button
             type="button"
-            onClick={() => { createMutation.reset(); setIsCreateModalOpen(true) }}
+            onClick={() => {
+              resetNoteForm()
+              createMutation.reset()
+              updateMutation.reset()
+              setSelectedNoteId(null)
+              setIsEditingNote(false)
+              setIsCreateModalOpen(true)
+            }}
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#7C2AE8] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#6B22C9] hover:shadow-md"
           >
             <Plus className="h-4 w-4" />
@@ -122,7 +128,14 @@ export function NotePage() {
                 <div className="mt-4 flex justify-end gap-2 border-t border-[#E0D7E7]/70 pt-3 dark:border-[#332140]">
                   <button
                     type="button"
-                    onClick={(event) => { event.stopPropagation(); setSelectedNoteId(note.id); setIsEditingNote(true) }}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      updateMutation.reset()
+                      setSelectedNoteId(note.id)
+                      setTitle(note.title)
+                      setContent(note.content)
+                      setIsEditingNote(true)
+                    }}
                     className="inline-flex h-8 w-8 items-center justify-center gap-1 overflow-hidden rounded-lg border border-[#7C2AE8]/40 px-2 text-xs font-medium text-[#7C2AE8] transition-all hover:bg-[#7C2AE8]/10 group-hover:w-18 group-focus-within:w-18"
                     aria-label="Edit note"
                   >
@@ -172,7 +185,13 @@ export function NotePage() {
       )}
 
       {isCreateModalOpen && (
-        <Modal title="Create note" onClose={() => !createMutation.isPending && setIsCreateModalOpen(false)}>
+        <Modal title="Create note" onClose={() => {
+          if (!createMutation.isPending) {
+            resetNoteForm()
+            createMutation.reset()
+            setIsCreateModalOpen(false)
+          }
+        }}>
           <div className="space-y-4">
             <label className="block text-sm font-medium text-[#2A1A3D] dark:text-[#EEE6F4]">
               Title
@@ -184,7 +203,7 @@ export function NotePage() {
             </label>
             {createMutation.isError && <p className="text-sm text-[#B23A5C]">{createMutation.error instanceof Error ? createMutation.error.message : 'Unable to create note.'}</p>}
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setIsCreateModalOpen(false)} className="rounded-lg border border-[#E0D7E7] px-4 py-2 text-sm transition-colors hover:bg-[#F1E9F5] dark:border-[#332140] dark:hover:bg-[#2A1938]">Cancel</button>
+              <button type="button" onClick={() => { resetNoteForm(); createMutation.reset(); setIsCreateModalOpen(false) }} className="rounded-lg border border-[#E0D7E7] px-4 py-2 text-sm transition-colors hover:bg-[#F1E9F5] dark:border-[#332140] dark:hover:bg-[#2A1938]">Cancel</button>
               <button
                 type="button"
                 onClick={() => createMutation.mutate()}
@@ -199,7 +218,14 @@ export function NotePage() {
       )}
 
       {selectedNoteId && (
-        <Modal title={isEditingNote ? 'Edit note' : 'Note details'} onClose={() => !updateMutation.isPending && setSelectedNoteId(null)}>
+        <Modal title={isEditingNote ? 'Edit note' : 'Note details'} onClose={() => {
+          if (!updateMutation.isPending) {
+            resetNoteForm()
+            updateMutation.reset()
+            setIsEditingNote(false)
+            setSelectedNoteId(null)
+          }
+        }}>
           {noteQuery.isLoading ? (
             <p className="text-sm text-[#6B5C7A]">Loading note...</p>
           ) : noteQuery.isError ? (
@@ -210,7 +236,7 @@ export function NotePage() {
               <textarea value={content} onChange={(event) => setContent(event.target.value)} className="input min-h-32 resize-y" />
               {updateMutation.isError && <p className="text-sm text-[#B23A5C]">{updateMutation.error instanceof Error ? updateMutation.error.message : 'Unable to update note.'}</p>}
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setIsEditingNote(false)} className="rounded-lg border border-[#E0D7E7] px-4 py-2 text-sm transition-colors hover:bg-[#F1E9F5] dark:border-[#332140] dark:hover:bg-[#2A1938]">Cancel</button>
+                <button type="button" onClick={() => { resetNoteForm(); updateMutation.reset(); setIsEditingNote(false) }} className="rounded-lg border border-[#E0D7E7] px-4 py-2 text-sm transition-colors hover:bg-[#F1E9F5] dark:border-[#332140] dark:hover:bg-[#2A1938]">Cancel</button>
                 <button
                   type="button"
                   onClick={() => updateMutation.mutate()}
@@ -232,11 +258,16 @@ export function NotePage() {
       )}
 
       {deleteTargetId && (
-        <Modal title="Delete note" onClose={() => !deleteMutation.isPending && setDeleteTargetId(null)}>
+        <Modal title="Delete note" onClose={() => {
+          if (!deleteMutation.isPending) {
+            deleteMutation.reset()
+            setDeleteTargetId(null)
+          }
+        }}>
           <p className="text-sm text-[#6B5C7A] dark:text-[#93839F]">This note will be permanently deleted.</p>
           {deleteMutation.isError && <p className="mt-3 text-sm text-[#B23A5C]">{deleteMutation.error instanceof Error ? deleteMutation.error.message : 'Unable to delete note.'}</p>}
           <div className="mt-6 flex justify-end gap-2">
-            <button type="button" onClick={() => setDeleteTargetId(null)} className="rounded-lg border border-[#E0D7E7] px-4 py-2 text-sm transition-colors hover:bg-[#F1E9F5] dark:border-[#332140] dark:hover:bg-[#2A1938]">Cancel</button>
+            <button type="button" onClick={() => { deleteMutation.reset(); setDeleteTargetId(null) }} className="rounded-lg border border-[#E0D7E7] px-4 py-2 text-sm transition-colors hover:bg-[#F1E9F5] dark:border-[#332140] dark:hover:bg-[#2A1938]">Cancel</button>
             <button
               type="button"
               onClick={() => deleteMutation.mutate()}

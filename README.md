@@ -1,117 +1,215 @@
-# TaskFlow — Frontend
+# Note Manager
 
-A responsive React frontend for the Project & Task Management Portal. It consumes
-the backend REST API and stores task data in an SQL database (handled by the
-backend).
+Note Manager is a responsive React and TypeScript application for creating,
+organizing, and reviewing notes. It supports authenticated users, role-based
+administration, user posts, profile management, and Progressive Web App (PWA)
+installation.
 
 ## Features
 
-- Create, read, update, and delete tasks
-- Task fields: Title, Description, Priority (Low/Medium/High),
-  Status (Pending/In Progress/Completed), Created Date
-- Form validation with clear inline error messages
-- Loading states (skeletons + spinners)
-- Success / error toast notifications
-- Delete confirmation modal
-- Empty states
-- Search + status filter
-- Mobile-responsive layout (Tailwind CSS)
+- Register with a name, email, password, and interests
+- Sign in, refresh, and terminate a cookie-based or bearer-token session
+- Create, view, edit, and delete personal notes
+- Paginated notes sorted by newest creation date
+- Create and view posts for the current user
+- Admin user management with role and interest assignment
+- Admin review of all notes and their owners
+- Dashboard statistics for users and interest groups
+- Profile viewing and account management
+- Responsive desktop and mobile layout
+- Loading, empty, error, and confirmation states
+- Installable PWA with an auto-updating service worker
+
+## Technology
+
+- React 19 and TypeScript
+- Vite
+- Tailwind CSS
+- React Router
+- TanStack React Query
+- Lucide React
+- Vite PWA plugin
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) 20+ (LTS recommended)
-- npm 10+
-- The backend API running (see the backend setup). The app expects the API at
-  `http://localhost:5000/api` by default.
+- Node.js 20 or newer
+- npm 10 or newer
+- A running backend that provides the API described below
 
 ## Getting Started
 
+Install dependencies and start the development server:
+
 ```bash
-# 1. Install dependencies
 npm install
-
-# 2. Configure the API URL (optional)
-#    Copy .env.example to .env and adjust VITE_API_URL if your backend
-#    runs on a different host/port.
-cp .env.example .env
-
-# 3. Run the dev server
 npm run dev
-
-# 4. Open http://localhost:5173
 ```
+
+Open `http://localhost:5173` in a browser. The frontend uses
+`http://localhost:5000/api/v1` when `VITE_API_URL` is not set.
 
 ## Environment Variables
 
-| Variable        | Description                                  | Default                          |
-| --------------- | -------------------------------------------- | -------------------------------- |
-| `VITE_API_URL` | Base URL of the backend REST API (no trailing slash) | `http://localhost:5000/api` |
+Create a `.env` file in the project root to point the frontend at another
+backend:
+
+```env
+VITE_API_URL=http://localhost:5000/api/v1
+```
+
+`VITE_API_URL` is normalized by the client, but it is best to provide the base
+URL without a trailing slash. The repository also includes `.env.example` for
+the deployed backend configuration. Never commit private credentials or tokens
+to an environment file.
 
 ## Available Scripts
 
-| Command        | Description                                     |
-| -------------- | ----------------------------------------------- |
-| `npm run dev`  | Start the Vite dev server with hot reload       |
-| `npm run build`| Type-check and build for production             |
-| `npm run lint` | Run ESLint                                      |
-| `npm run preview` | Preview the production build locally          |
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start Vite with hot reload |
+| `npm run build` | Type-check and create the production build |
+| `npm run lint` | Run ESLint |
+| `npm run preview` | Serve the production build locally |
+| `npm run generate-icons` | Generate application icons when the icon script is available |
 
-## API Contract
+There is currently no test script or test suite in this repository.
 
-The frontend communicates with the backend via these REST endpoints
-(`/tasks` appended to `VITE_API_URL`):
+## Routes and Access
 
-| Method   | Endpoint        | Description          |
-| -------- | --------------- | -------------------- |
-| `GET`    | `/tasks`        | Fetch all tasks      |
-| `POST`   | `/tasks`        | Create a task        |
-| `GET`    | `/tasks/:id`    | Fetch a single task  |
-| `PUT`    | `/tasks/:id`    | Update a task        |
-| `DELETE` | `/tasks/:id`    | Delete a task        |
+| Route | Access | Purpose |
+| --- | --- | --- |
+| `/login` | Public | Sign in |
+| `/register` | Public | Create an account |
+| `/` | Authenticated | Dashboard overview |
+| `/notes` | Authenticated | Manage personal notes |
+| `/settings` | Authenticated | Settings page |
+| `/profile` | Authenticated | View and manage profile |
+| `/my-posts` | `USER` only | View and create posts |
+| `/users` | `ADMIN` only | Manage users |
+| `/admin/notes` | `ADMIN` only | Review all notes |
 
-A task resource looks like:
+Role values are case-sensitive and must be `ADMIN` or `USER`. Unauthenticated
+users are redirected to `/login`; authenticated users without the required role
+are redirected to `/`. Unknown routes also redirect to `/`.
+
+## Backend API Contract
+
+The client sends all requests with `credentials: 'include'`. If a token is
+available, it also sends `Authorization: Bearer <token>`. Successful responses
+generally follow this shape:
 
 ```json
 {
-  "id": 1,
-  "title": "Set up database",
-  "description": "Create the tasks table",
-  "priority": "High",
-  "status": "InProgress",
-  "createdDate": "2025-01-01T12:00:00.000Z"
+  "success": true,
+  "message": "Request completed",
+  "data": {},
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 0,
+    "totalPage": 1
+  }
 }
 ```
 
-## Project Structure
+### Authentication and Profile
 
-```
-src/
-  App.tsx                 # Root component: state, API calls, routing
-  main.tsx                # React entry point
-  types.ts                # Shared TypeScript types
-  index.css               # Tailwind base + global styles
-  App.css                 # App-scoped styles
-  lib/
-    api.ts                # REST API client (fetch)
-    utils.ts              # Validation schema, color maps, helpers
-  components/
-    TaskCard.tsx          # Single task card
-    TaskList.tsx          # Task grid + empty/loading states
-    TaskForm.tsx          # Create / edit form
-    DeleteConfirmation.tsx # Delete modal
-    ui/
-      Modal.tsx
-      LoadingSpinner.tsx
-      EmptyState.tsx
-      Badge.tsx           # PriorityBadge, StatusBadge
-      Toast.tsx           # Toast notifications
-```
+| Method | Endpoint | Payload or purpose |
+| --- | --- | --- |
+| `POST` | `/auth/login` | `{ email, password }` |
+| `POST` | `/auth/register` | `{ name, email, password, interests }` |
+| `POST` | `/auth/refresh` | Refresh the current session |
+| `POST` | `/auth/logout` | End the current session |
+| `GET` | `/users/me` | Load the current user |
+| `PATCH` | `/users/:id` | Update profile fields |
+| `DELETE` | `/users/:id` | Delete the current account |
 
-## Running with Docker
+### Notes and Posts
 
-A multi-stage Dockerfile is provided for production builds. Build and run:
+| Method | Endpoint | Payload or purpose |
+| --- | --- | --- |
+| `GET` | `/notes/my-notes?sort=-createdAt&page=&limit=` | Paginated personal notes; the UI uses six per page |
+| `POST` | `/notes` | `{ title, content }` |
+| `GET` | `/notes/:id` | Load one note |
+| `PATCH` | `/notes/:id` | Update note fields |
+| `DELETE` | `/notes/:id` | Delete a note |
+| `GET` | `/notes?sort=-createdAt&page=&limit=` | Admin-only all-notes listing with owners |
+| `GET` | `/aggregations/posts/user/:userId?page=&limit=` | Load user metadata and paginated posts |
+| `POST` | `/posts` | `{ title, content }` |
+
+### Users and Dashboard
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/users?page=&limit=` | Paginated admin user list; the UI uses ten per page |
+| `POST` | `/users` | Create a user with role and interests |
+| `PATCH` | `/users/:id` | Update a user; password is optional |
+| `DELETE` | `/users/:id` | Delete a user |
+| `GET` | `/aggregations/users/grouped-by-interest` | Group users by interest |
+| `GET` | `/aggregations/user/stats` | Load dashboard statistics |
+
+The client accepts note identifiers as either `id` or Mongo-style `_id`. API
+errors may use `message`, a string `error`, `errorSources`, or structured
+validation issues.
+
+## PWA and Deployment
+
+The production build generates a web manifest, service worker, and installable
+icons. Static JavaScript, CSS, HTML, SVG, PNG, and ICO assets are precached.
+Requests matching `/api/` use a network-first cache strategy with a five-second
+network timeout.
+
+The repository includes deployment configuration for two common setups:
+
+- `vercel.json` rewrites frontend routes to `index.html` for SPA navigation.
+- `nginx.conf` provides SPA fallback behavior and proxies `/api/` to
+  `http://backend:5000/api/`.
+
+For Vercel or another separately hosted frontend, set `VITE_API_URL` to the
+external backend URL. The frontend rewrite does not proxy API requests. Cookie
+authentication across separate frontend and backend domains also requires
+appropriate backend CORS and cookie settings.
+
+Build and preview the production app with:
 
 ```bash
-docker build -t taskflow-frontend .
-docker run -p 80:80 -e VITE_API_URL=http://host.docker.internal:5000/api taskflow-frontend
+npm run build
+npm run preview
 ```
+
+There is no Dockerfile in this repository, so Docker image commands are not
+provided here.
+
+## Project Structure
+
+```text
+src/
+  App.tsx                    # Routes and authentication guards
+  main.tsx                   # React, Router, Query, and DnD providers
+  types.ts                  # Shared application types
+  contexts/
+    AuthContext.tsx          # Authentication, session, and profile operations
+    useAuth.ts               # Auth context interface and hook
+  lib/
+    notesApi.ts              # Notes and posts API client
+    usersApi.ts              # Users and dashboard API client
+    utils.ts                 # Shared utility code
+  layout/
+    MainLayout.tsx           # Authenticated application shell
+  components/
+    DashboardOverview.tsx    # Dashboard content
+    layout/                  # Header, sidebar, menus, and navigation data
+    ui/                      # Shared UI primitives
+    *Skeleton.tsx             # Loading placeholders
+  pages/                     # Authentication, notes, users, profile, and posts views
+public/                      # Favicon and PWA assets
+```
+
+## Current Limitations
+
+- Settings is currently a placeholder page.
+- Header search, notifications, and Help & Support are visual controls without
+  complete behavior.
+- Drag-and-drop providers are configured, but no current screen uses them.
+- The `generate-icons` script references `scripts/generate-icons.mjs`; confirm
+  that the script exists before using it in a fresh checkout.

@@ -29,6 +29,14 @@ export function UsersPage() {
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null)
 
+  function resetUserForm() {
+    setName('')
+    setEmail('')
+    setPassword('')
+    setRole('USER')
+    setInterests('')
+  }
+
   const usersQuery = useQuery({
     queryKey: ['users', page, token],
     queryFn: () => getUsers(page, PAGE_SIZE, token),
@@ -45,11 +53,7 @@ export function UsersPage() {
     }, token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      setName('')
-      setEmail('')
-      setPassword('')
-      setRole('USER')
-      setInterests('')
+      resetUserForm()
       setIsCreateModalOpen(false)
     },
   })
@@ -65,11 +69,7 @@ export function UsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setEditingUser(null)
-      setName('')
-      setEmail('')
-      setPassword('')
-      setRole('USER')
-      setInterests('')
+      resetUserForm()
     },
   })
 
@@ -78,10 +78,12 @@ export function UsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setDeleteTarget(null)
+      deleteMutation.reset()
     },
   })
 
   function openEditModal(item: AdminUser) {
+    setIsCreateModalOpen(false)
     createMutation.reset()
     updateMutation.reset()
     setEditingUser(item)
@@ -140,7 +142,13 @@ export function UsersPage() {
             <p className="text-sm text-[#6B5C7A] dark:text-[#93839F]">Manage registered users in your workspace.</p>
             <button
               type="button"
-              onClick={() => { createMutation.reset(); setIsCreateModalOpen(true) }}
+              onClick={() => {
+                setEditingUser(null)
+                resetUserForm()
+                createMutation.reset()
+                updateMutation.reset()
+                setIsCreateModalOpen(true)
+              }}
               className="rounded-xl bg-[#7C2AE8] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#6B22C9] hover:shadow-md"
             >
               Create user
@@ -247,7 +255,13 @@ export function UsersPage() {
       </div>
 
       {isCreateModalOpen && (
-        <Modal title="Create user" onClose={() => !createMutation.isPending && setIsCreateModalOpen(false)}>
+        <Modal title="Create user" onClose={() => {
+          if (!createMutation.isPending) {
+            resetUserForm()
+            createMutation.reset()
+            setIsCreateModalOpen(false)
+          }
+        }}>
           <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); createMutation.mutate() }}>
             <label className={labelClass}>Name<input required value={name} onChange={(event) => setName(event.target.value)} className={inputClass} /></label>
             <label className={labelClass}>Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} /></label>
@@ -268,7 +282,7 @@ export function UsersPage() {
             </label>
             {createMutation.isError && <p className="text-sm text-[#B23A5C]">{createMutation.error instanceof Error ? createMutation.error.message : 'Unable to create user.'}</p>}
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setIsCreateModalOpen(false)} className={cancelBtnClass}>Cancel</button>
+              <button type="button" onClick={() => { resetUserForm(); createMutation.reset(); setIsCreateModalOpen(false) }} className={cancelBtnClass}>Cancel</button>
               <button type="submit" disabled={!name.trim() || !email.trim() || !isStrongPassword(password) || createMutation.isPending} className={primaryBtnClass}>
                 {createMutation.isPending ? 'Creating...' : 'Create user'}
               </button>
@@ -278,7 +292,13 @@ export function UsersPage() {
       )}
 
       {editingUser && (
-        <Modal title="Edit user" onClose={() => !updateMutation.isPending && setEditingUser(null)}>
+        <Modal title="Edit user" onClose={() => {
+          if (!updateMutation.isPending) {
+            resetUserForm()
+            updateMutation.reset()
+            setEditingUser(null)
+          }
+        }}>
           <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); updateMutation.mutate() }}>
             <label className={labelClass}>Name<input required value={name} onChange={(event) => setName(event.target.value)} className={inputClass} /></label>
             <label className={labelClass}>Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} /></label>
@@ -297,7 +317,7 @@ export function UsersPage() {
             <label className={labelClass}>Interests<input value={interests} onChange={(event) => setInterests(event.target.value)} className={inputClass} /></label>
             {updateMutation.isError && <p className="text-sm text-[#B23A5C]">{updateMutation.error instanceof Error ? updateMutation.error.message : 'Unable to update user.'}</p>}
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setEditingUser(null)} className={cancelBtnClass}>Cancel</button>
+              <button type="button" onClick={() => { resetUserForm(); updateMutation.reset(); setEditingUser(null) }} className={cancelBtnClass}>Cancel</button>
               <button type="submit" disabled={!name.trim() || !email.trim() || (password.length > 0 && !isStrongPassword(password)) || updateMutation.isPending} className={primaryBtnClass}>
                 {updateMutation.isPending ? 'Saving...' : 'Save changes'}
               </button>
@@ -307,11 +327,16 @@ export function UsersPage() {
       )}
 
       {deleteTarget && (
-        <Modal title="Delete user" onClose={() => !deleteMutation.isPending && setDeleteTarget(null)}>
+        <Modal title="Delete user" onClose={() => {
+          if (!deleteMutation.isPending) {
+            deleteMutation.reset()
+            setDeleteTarget(null)
+          }
+        }}>
           <p className="text-sm text-[#6B5C7A] dark:text-[#93839F]">Delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.</p>
           {deleteMutation.isError && <p className="mt-3 text-sm text-[#B23A5C]">{deleteMutation.error instanceof Error ? deleteMutation.error.message : 'Unable to delete user.'}</p>}
           <div className="mt-6 flex justify-end gap-2">
-            <button type="button" onClick={() => setDeleteTarget(null)} className={cancelBtnClass}>Cancel</button>
+            <button type="button" onClick={() => { deleteMutation.reset(); setDeleteTarget(null) }} className={cancelBtnClass}>Cancel</button>
             <button
               type="button"
               onClick={() => deleteMutation.mutate()}

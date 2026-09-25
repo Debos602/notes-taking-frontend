@@ -16,6 +16,11 @@ export function UserPostsPage() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+
+  function resetPostForm() {
+    setTitle('')
+    setContent('')
+  }
   const postsQuery = useQuery({
     queryKey: ['user-posts', userId, page, token],
     queryFn: () => getUserPosts(userId ?? '', page, PAGE_SIZE, token),
@@ -26,8 +31,7 @@ export function UserPostsPage() {
     mutationFn: () => createPost({ title: title.trim(), content: content.trim() }, token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-posts', userId] })
-      setTitle('')
-      setContent('')
+      resetPostForm()
       setPage(1)
       setIsCreateModalOpen(false)
     },
@@ -74,7 +78,7 @@ export function UserPostsPage() {
             <p className="text-sm text-[#6B5C7A] dark:text-[#93839F]">Posts created by {postsQuery.data?.data.name || user.name}.</p>
             <button
               type="button"
-              onClick={() => { createMutation.reset(); setIsCreateModalOpen(true) }}
+              onClick={() => { resetPostForm(); createMutation.reset(); setIsCreateModalOpen(true) }}
               className="inline-flex items-center gap-2 rounded-xl bg-[#7C2AE8] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#6B22C9] hover:shadow-md"
             >
               <Plus className="h-4 w-4" />
@@ -133,7 +137,13 @@ export function UserPostsPage() {
       </div>
 
       {isCreateModalOpen && (
-        <Modal title="Create post" onClose={() => !createMutation.isPending && setIsCreateModalOpen(false)}>
+        <Modal title="Create post" onClose={() => {
+          if (!createMutation.isPending) {
+            resetPostForm()
+            createMutation.reset()
+            setIsCreateModalOpen(false)
+          }
+        }}>
           <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); createMutation.mutate() }}>
             <label className="block text-sm font-medium text-[#2A1A3D] dark:text-[#EEE6F4]">
               Title
@@ -145,7 +155,7 @@ export function UserPostsPage() {
             </label>
             {createMutation.isError && <p className="text-sm text-[#B23A5C]">{createMutation.error instanceof Error ? createMutation.error.message : 'Unable to create post.'}</p>}
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setIsCreateModalOpen(false)} className="rounded-lg border border-[#E0D7E7] px-4 py-2 text-sm transition-colors hover:bg-[#F1E9F5] dark:border-[#332140] dark:hover:bg-[#2A1938]">Cancel</button>
+              <button type="button" onClick={() => { resetPostForm(); createMutation.reset(); setIsCreateModalOpen(false) }} className="rounded-lg border border-[#E0D7E7] px-4 py-2 text-sm transition-colors hover:bg-[#F1E9F5] dark:border-[#332140] dark:hover:bg-[#2A1938]">Cancel</button>
               <button
                 type="submit"
                 disabled={!title.trim() || !content.trim() || createMutation.isPending}
