@@ -113,7 +113,7 @@ export function Sidebar({
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3 px-2" aria-label="Navigation">
-        {navItems.map((item) => (
+        {navItems.filter((item) => item.href === "/my-posts" ? user?.role === "USER" : ["/users", "/admin/notes"].includes(item.href) ? user?.role === "ADMIN" : true).map((item) => (
           <SidebarNavItem
             key={item.name}
             item={item}

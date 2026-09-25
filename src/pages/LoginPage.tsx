@@ -12,6 +12,11 @@ const ACCENT_TEXT = 'text-[#7C2AE8] dark:text-[#A868F0]'
 const ERROR = 'text-[#B23A5C] dark:text-[#D9628C]'
 const ERROR_BORDER = 'border-[#B23A5C] focus:border-[#B23A5C] dark:border-[#D9628C] dark:focus:border-[#D9628C]'
 
+const LOGIN_CREDENTIALS = {
+  user: { email: 'alice@example.com', password: 'StrongPass1!' },
+  admin: { email: 'admin@gmail.com', password: 'De@206914' },
+}
+
 const inputBase = `mt-1.5 block w-full rounded-sm border-2 bg-[#FAF8FB] px-3 py-2 text-sm text-[#2A1A3D] transition-colors placeholder:text-[#93839F] focus:outline-none focus:border-[#7C2AE8] disabled:cursor-not-allowed disabled:bg-[#F3EEF6] disabled:text-[#93839F] dark:bg-[#1B1023] dark:text-[#EEE6F4] dark:focus:border-[#A868F0] dark:disabled:bg-[#170D1F]`
 
 export function LoginPage() {
@@ -55,6 +60,12 @@ export function LoginPage() {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: '' }))
   }
 
+  const fillCredentials = (account: keyof typeof LOGIN_CREDENTIALS) => {
+    setEmail(LOGIN_CREDENTIALS[account].email)
+    setPassword(LOGIN_CREDENTIALS[account].password)
+    setErrors({})
+  }
+
   return (
     <div className={`min-h-screen ${PAPER} flex items-center justify-center px-4 py-12`}>
       <div className="w-full max-w-md">
@@ -63,7 +74,7 @@ export function LoginPage() {
             className="inline-flex h-12 w-12 items-center justify-center border-2 text-sm font-bold leading-none tracking-[-0.02em]"
             style={{ borderColor: ACCENT, color: ACCENT }}
           >
-            TM
+            NT
           </span>
           <h1 className={`mt-5 text-2xl font-bold tracking-[-0.02em] ${INK}`}>
             Welcome back
@@ -156,6 +167,25 @@ export function LoginPage() {
                   </button>
                 </div>
               </div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => fillCredentials('user')}
+                disabled={isSubmitting}
+                className={`rounded-sm border-2 ${LINE} px-3 py-2 text-xs font-medium ${INK} transition-colors hover:border-[#7C2AE8] hover:bg-[#F1E9F5] disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-[#2A1938]`}
+              >
+                Fill user account
+              </button>
+              <button
+                type="button"
+                onClick={() => fillCredentials('admin')}
+                disabled={isSubmitting}
+                className={`rounded-sm border-2 ${LINE} px-3 py-2 text-xs font-medium ${INK} transition-colors hover:border-[#7C2AE8] hover:bg-[#F1E9F5] disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-[#2A1938]`}
+              >
+                Fill admin account
+              </button>
             </div>
 
             {errors.form && (

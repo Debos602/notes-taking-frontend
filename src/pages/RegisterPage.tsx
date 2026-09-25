@@ -98,7 +98,7 @@ export function RegisterPage() {
             className="inline-flex h-12 w-12 items-center justify-center border-2 text-sm font-bold leading-none tracking-[-0.02em]"
             style={{ borderColor: ACCENT, color: ACCENT }}
           >
-            TM
+            NT
           </span>
           <h1 className={`mt-5 text-2xl font-bold tracking-[-0.02em] ${INK}`}>
             Create account

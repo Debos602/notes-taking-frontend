@@ -5,6 +5,7 @@ export type DashboardPriority = 'Low' | 'Medium' | 'High'
 
 export interface AuthUser {
   id: number | string
+  _id?: string
   name: string
   email: string
   role?: string

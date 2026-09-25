@@ -5,6 +5,7 @@ import {
   HelpCircle,
   LogOut,
   StickyNote,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -17,6 +18,9 @@ export type NavItem = {
 export const navItems: NavItem[] = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/" },
   { name: "Notes", icon: StickyNote, href: "/notes" },
+  { name: "My posts", icon: StickyNote, href: "/my-posts" },
+  { name: "All notes", icon: StickyNote, href: "/admin/notes" },
+  { name: "Users", icon: Users, href: "/users" },
   { name: "Settings", icon: Settings, href: "/settings" },
 ];
 
