@@ -9,6 +9,13 @@ import { createUser, deleteUser, getUsers, updateUser, type AdminUser } from '..
 
 const PAGE_SIZE = 10
 
+function isStrongPassword(password: string) {
+  return password.length >= 8
+    && /[A-Z]/.test(password)
+    && /[a-z]/.test(password)
+    && /[^A-Za-z0-9]/.test(password)
+}
+
 export function UsersPage() {
   const { user, token } = useAuth()
   const queryClient = useQueryClient()
@@ -107,6 +114,9 @@ export function UsersPage() {
 
   const users = usersQuery.data?.data ?? []
   const totalPages = usersQuery.data?.meta.totalPage ?? 1
+  const passwordError = password.length > 0 && !isStrongPassword(password)
+    ? 'Password must be at least 8 characters and include an uppercase letter, a lowercase letter, and a special character.'
+    : ''
   const inputClass = 'input mt-2'
   const labelClass = 'block text-sm font-medium text-[#2A1A3D] dark:text-[#EEE6F4]'
   const cancelBtnClass = 'rounded-lg border border-[#E0D7E7] px-4 py-2 text-sm transition-colors hover:bg-[#F1E9F5] dark:border-[#332140] dark:hover:bg-[#2A1938]'
@@ -241,7 +251,10 @@ export function UsersPage() {
           <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); createMutation.mutate() }}>
             <label className={labelClass}>Name<input required value={name} onChange={(event) => setName(event.target.value)} className={inputClass} /></label>
             <label className={labelClass}>Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} /></label>
-            <label className={labelClass}>Password<input required minLength={8} type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={inputClass} /></label>
+            <label className={labelClass}>Password
+              <input required minLength={8} type="password" value={password} onChange={(event) => setPassword(event.target.value)} aria-invalid={Boolean(passwordError)} className={`${inputClass} ${passwordError ? 'border-[#B23A5C] focus:border-[#B23A5C]' : ''}`} />
+              {passwordError && <span className="mt-1 block text-xs text-[#B23A5C]">{passwordError}</span>}
+            </label>
             <label className={labelClass}>Role
               <select value={role} onChange={(event) => setRole(event.target.value as 'ADMIN' | 'USER')} className={inputClass}>
                 <option value="USER">USER</option>
@@ -256,7 +269,7 @@ export function UsersPage() {
             {createMutation.isError && <p className="text-sm text-[#B23A5C]">{createMutation.error instanceof Error ? createMutation.error.message : 'Unable to create user.'}</p>}
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setIsCreateModalOpen(false)} className={cancelBtnClass}>Cancel</button>
-              <button type="submit" disabled={!name.trim() || !email.trim() || password.length < 8 || createMutation.isPending} className={primaryBtnClass}>
+              <button type="submit" disabled={!name.trim() || !email.trim() || !isStrongPassword(password) || createMutation.isPending} className={primaryBtnClass}>
                 {createMutation.isPending ? 'Creating...' : 'Create user'}
               </button>
             </div>
@@ -272,7 +285,8 @@ export function UsersPage() {
             <label className={labelClass}>
               New password
               <span className="mt-1 block text-xs font-normal text-[#6B5C7A] dark:text-[#93839F]">Leave blank to keep the current password.</span>
-              <input minLength={8} type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={inputClass} />
+              <input minLength={8} type="password" value={password} onChange={(event) => setPassword(event.target.value)} aria-invalid={Boolean(passwordError)} className={`${inputClass} ${passwordError ? 'border-[#B23A5C] focus:border-[#B23A5C]' : ''}`} />
+              {passwordError && <span className="mt-1 block text-xs text-[#B23A5C]">{passwordError}</span>}
             </label>
             <label className={labelClass}>Role
               <select value={role} onChange={(event) => setRole(event.target.value as 'ADMIN' | 'USER')} className={inputClass}>
@@ -284,7 +298,7 @@ export function UsersPage() {
             {updateMutation.isError && <p className="text-sm text-[#B23A5C]">{updateMutation.error instanceof Error ? updateMutation.error.message : 'Unable to update user.'}</p>}
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setEditingUser(null)} className={cancelBtnClass}>Cancel</button>
-              <button type="submit" disabled={!name.trim() || !email.trim() || (password.length > 0 && password.length < 8) || updateMutation.isPending} className={primaryBtnClass}>
+              <button type="submit" disabled={!name.trim() || !email.trim() || (password.length > 0 && !isStrongPassword(password)) || updateMutation.isPending} className={primaryBtnClass}>
                 {updateMutation.isPending ? 'Saving...' : 'Save changes'}
               </button>
             </div>

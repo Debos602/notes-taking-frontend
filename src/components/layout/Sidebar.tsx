@@ -93,7 +93,7 @@ export function Sidebar({
             className="truncate text-[22px] font-bold leading-none tracking-[-0.02em]"
             style={{ color: accent }}
           >
-            Task Management
+            Notes Management
           </span>
         )}
 

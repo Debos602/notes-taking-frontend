@@ -15,22 +15,35 @@ import { UsersPage } from './pages/UsersPage'
 import { AdminNotesPage } from './pages/AdminNotesPage'
 import { UserPostsPage } from './pages/UserPostsPage'
 
+function InitialLoadingScreen() {
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center px-6">
+      <div className="flex flex-col items-center gap-4 text-center">
+        <div className="h-16 w-16 rounded-full border-4 border-sky-200 border-t-sky-600 animate-spin" aria-label="Loading" />
+        <div>
+          <p className="text-xl font-semibold tracking-tight">Loading your workspace</p>
+          <p className="mt-1 text-sm text-slate-500">Checking your session and preparing your dashboard...</p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function ProtectedRoute({ element }: { element: ReactNode }) {
   const { user, authReady } = useAuth()
-  if (!authReady) return null
+  if (!authReady) return <InitialLoadingScreen />
   return user ? <>{element}</> : <Navigate to="/login" replace />
 }
 
 function AdminRoute({ element }: { element: ReactNode }) {
   const { user, authReady } = useAuth()
-  if (!authReady) return null
+  if (!authReady) return <InitialLoadingScreen />
   return user?.role === 'ADMIN' ? <>{element}</> : <Navigate to="/" replace />
 }
 
 function UserRoute({ element }: { element: ReactNode }) {
   const { user, authReady } = useAuth()
-  if (!authReady) return null
+  if (!authReady) return <InitialLoadingScreen />
   return user?.role === 'USER' ? <>{element}</> : <Navigate to="/" replace />
 }
 

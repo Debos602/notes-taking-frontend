@@ -51,6 +51,30 @@ function isAuthUser(value: unknown): value is AuthUser {
   return isRecord(value) && typeof value.email === 'string'
 }
 
+function normalizeAuthUser(value: unknown): AuthUser | null {
+  if (!isRecord(value) || typeof value.email !== 'string') {
+    return null
+  }
+
+  const rawId = value.id ?? value._id ?? value.email
+  return {
+    ...(value as Partial<AuthUser>),
+    id: String(rawId),
+    name: typeof value.name === 'string' ? value.name : value.email.split('@')[0],
+    email: value.email,
+    role: typeof value.role === 'string' ? value.role : undefined,
+    interests: Array.isArray(value.interests)
+      ? value.interests.filter((item): item is string => typeof item === 'string')
+      : undefined,
+  }
+}
+
+function getUserId(user: AuthUser | null | undefined): string | null {
+  if (!user) return null
+  const id = user.id ?? user._id
+  return id === undefined || id === null || id === '' ? null : String(id)
+}
+
 async function getCurrentUser(token?: string): Promise<AuthUser> {
   const response = await fetch(`${API_BASE_URL}/users/me`, {
     method: 'GET',
@@ -60,15 +84,17 @@ async function getCurrentUser(token?: string): Promise<AuthUser> {
   const result: unknown = await response.json().catch(() => null)
   const resultRecord = isRecord(result) ? result : null
   const dataRecord = isRecord(resultRecord?.data) ? resultRecord.data : null
-  const user = isAuthUser(dataRecord?.user)
-    ? dataRecord.user
-    : isAuthUser(resultRecord?.user)
-      ? resultRecord.user
-      : isAuthUser(resultRecord?.data)
-        ? resultRecord.data
-        : isAuthUser(result)
-          ? result
-          : null
+  const user = normalizeAuthUser(
+    isAuthUser(dataRecord?.user)
+      ? dataRecord.user
+      : isAuthUser(resultRecord?.user)
+        ? resultRecord.user
+        : isAuthUser(resultRecord?.data)
+          ? resultRecord.data
+          : isAuthUser(result)
+            ? result
+            : null,
+  )
 
   if (!response.ok || !user || !('email' in user)) {
     throw new Error(
@@ -76,7 +102,7 @@ async function getCurrentUser(token?: string): Promise<AuthUser> {
     )
   }
 
-  return user as AuthUser
+  return user
 }
 
 async function loginRequest({ email, password }: { email: string; password: string }): Promise<AuthResult> {
@@ -89,10 +115,10 @@ async function loginRequest({ email, password }: { email: string; password: stri
   const result = await response.json().catch(() => null) as AuthResponse | null
   if (!response.ok) throw new Error(result?.message || result?.error || 'Login failed. Please check your credentials.')
   const token = getResponseToken(response, result)
-  return {
-    token,
-    user: result?.data?.user ?? { id: email, name: email.split('@')[0], email },
-  }
+  const user = normalizeAuthUser(result?.data?.user)
+    ?? { id: email, name: email.split('@')[0], email }
+
+  return { token, user }
 }
 
 async function registerRequest({ name, email, password, interests }: { name: string; email: string; password: string; interests?: string[] }): Promise<AuthResult> {
@@ -104,9 +130,12 @@ async function registerRequest({ name, email, password, interests }: { name: str
   })
   const result = await response.json().catch(() => null) as AuthResponse | null
   if (!response.ok || !result?.success) throw new Error(result?.message || result?.error || 'Registration failed. Please try again.')
+  const user = normalizeAuthUser(result.data?.user)
+    ?? { id: email, name, email, interests }
+
   return {
     token: getResponseToken(response, result),
-    user: result.data?.user ?? { id: email, name, email, interests },
+    user,
   }
 }
 
@@ -187,7 +216,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = useCallback(async (input: { name?: string; email?: string; interests?: string[] }) => {
     if (!user) throw new Error('You must be logged in to update your profile.')
 
-    const response = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(String(user.id))}`, {
+    const userId = getUserId(user)
+    if (!userId) {
+      throw new Error('Your session is invalid. Please log in again.')
+    }
+
+    const response = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(userId)}`, {
       method: 'PATCH',
       credentials: 'include',
       headers: {
@@ -202,20 +236,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data?: { user?: AuthUser } | AuthUser
       user?: AuthUser
     } | null
-    const updatedUser = result?.user
-      ?? (result?.data && 'user' in result.data ? result.data.user : result?.data)
+    const updatedUser = normalizeAuthUser(
+      result?.user
+        ?? (result?.data && 'user' in result.data ? result.data.user : result?.data),
+    )
 
     if (!response.ok || !updatedUser) {
       throw new Error(result?.message || result?.error || 'Unable to update your profile.')
     }
 
-    setUser(updatedUser as AuthUser)
+    setUser(updatedUser)
   }, [token, user])
 
   const deleteAccount = useCallback(async () => {
     if (!user) return
 
-    const response = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(String(user.id))}`, {
+    const userId = getUserId(user)
+    if (!userId) {
+      throw new Error('Your session is invalid. Please log in again.')
+    }
+
+    const response = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(userId)}`, {
       method: 'DELETE',
       credentials: 'include',
       headers: token && token !== 'cookie-session' ? { Authorization: `Bearer ${token}` } : undefined,

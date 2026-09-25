@@ -46,6 +46,40 @@ function authHeaders(token?: string | null): Record<string, string> {
   return token && token !== 'cookie-session' ? { Authorization: `Bearer ${token}` } : {}
 }
 
+function formatApiError(result: {
+  success?: boolean
+  message?: string
+  error?: string | { issues?: Array<{ message?: string; path?: string[] }> }
+  errorSources?: Array<{ path?: string; message?: string }>
+} | null, fallback: string): string {
+  const errorSources = Array.isArray(result?.errorSources)
+    ? result.errorSources
+        .map((item) => item?.message)
+        .filter((message): message is string => typeof message === 'string' && message.length > 0)
+    : []
+
+  const issueMessages = Array.isArray((result as { error?: { issues?: Array<{ message?: string }> } } | null)?.error?.issues)
+    ? (result as { error?: { issues?: Array<{ message?: string }> } })?.error?.issues
+        ?.map((issue) => issue.message)
+        .filter((message): message is string => typeof message === 'string' && message.length > 0) ?? []
+    : []
+
+  const combined = [...errorSources, ...issueMessages]
+  if (combined.length > 0) {
+    return combined.join(' ')
+  }
+
+  if (typeof result?.message === 'string' && result.message.length > 0) {
+    return result.message
+  }
+
+  if (typeof result?.error === 'string' && result.error.length > 0) {
+    return result.error
+  }
+
+  return fallback
+}
+
 export async function getUsers(page: number, limit: number, token?: string | null): Promise<UsersResponse> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
   const response = await fetch(`${API_BASE_URL}/users?${params.toString()}`, {
@@ -114,7 +148,7 @@ export async function createUser(input: CreateUserInput, token?: string | null):
   } | null
 
   if (!response.ok || !result?.success || !result.data) {
-    throw new Error(result?.message || result?.error || 'Unable to create user.')
+    throw new Error(formatApiError(result, 'Unable to create user.'))
   }
 
   return result.data
@@ -135,7 +169,7 @@ export async function updateUser(userId: string, input: UpdateUserInput, token?:
   } | null
 
   if (!response.ok || !result?.success || !result.data) {
-    throw new Error(result?.message || result?.error || 'Unable to update user.')
+    throw new Error(formatApiError(result, 'Unable to update user.'))
   }
 
   return result.data
@@ -154,6 +188,6 @@ export async function deleteUser(userId: string, token?: string | null): Promise
   } | null
 
   if (!response.ok || result?.success === false) {
-    throw new Error(result?.message || result?.error || 'Unable to delete user.')
+    throw new Error(formatApiError(result, 'Unable to delete user.'))
   }
 }
