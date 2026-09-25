@@ -6,6 +6,7 @@ import type { AuthContextType } from './useAuth'
 
 export const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace(/\/+$/, '')
 const AUTH_SESSION_KEY = 'auth-session-active'
+const AUTH_TOKEN_KEY = 'auth-token'
 
 type AuthResponse = {
   message?: string
@@ -170,6 +171,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const currentUser = await getCurrentUser(refreshedToken)
         setUser(currentUser)
         setToken(refreshedToken ?? 'cookie-session')
+        if (refreshedToken) {
+          sessionStorage.setItem(AUTH_TOKEN_KEY, refreshedToken)
+        }
       }
     } catch {
       // A missing backend session simply leaves the user signed out.
@@ -179,6 +183,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    // Prefer a persisted real token — this avoids depending on a cross-site
+    // cookie (which browsers, especially in incognito/private mode, may block).
+    const storedToken = sessionStorage.getItem(AUTH_TOKEN_KEY)
+    if (storedToken) {
+      setToken(storedToken)
+      getCurrentUser(storedToken)
+        .then((currentUser) => setUser(currentUser))
+        .catch(() => {
+          // Stored token is no longer valid — clear it and fall back to signed-out state.
+          sessionStorage.removeItem(AUTH_TOKEN_KEY)
+          sessionStorage.removeItem(AUTH_SESSION_KEY)
+          setToken(null)
+          setUser(null)
+        })
+        .finally(() => setAuthReady(true))
+      return
+    }
+
     if (sessionStorage.getItem(AUTH_SESSION_KEY) !== 'true') {
       setAuthReady(true)
       return
@@ -189,6 +211,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const { token: loginToken, user: currentUser } = await loginMutation.mutateAsync({ email, password })
     sessionStorage.setItem(AUTH_SESSION_KEY, 'true')
+    if (loginToken) {
+      sessionStorage.setItem(AUTH_TOKEN_KEY, loginToken)
+    }
     setToken(loginToken ?? 'cookie-session')
     setUser(currentUser)
   }, [loginMutation])
@@ -197,6 +222,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (name: string, email: string, password: string, interests?: string[]) => {
       const { token: registerToken, user: currentUser } = await registerMutation.mutateAsync({ name, email, password, interests })
       sessionStorage.setItem(AUTH_SESSION_KEY, 'true')
+      if (registerToken) {
+        sessionStorage.setItem(AUTH_TOKEN_KEY, registerToken)
+      }
       setToken(registerToken ?? 'cookie-session')
       setUser(currentUser)
     },
@@ -210,6 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(null)
       setUser(null)
       sessionStorage.removeItem(AUTH_SESSION_KEY)
+      sessionStorage.removeItem(AUTH_TOKEN_KEY)
     }
   }, [logoutMutation])
 
